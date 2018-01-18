@@ -19,12 +19,14 @@ test() ->
 new() ->
     spawn(fun() -> bank(0) end).
 
-balance(Pid) -> rpc(Pid, balance).
+balance(Pid) -> 
+    rpc(Pid, balance).
 
-add(Pid, X) -> rpc(Pid, {add, X}).
+add(Pid, Amount) -> 
+    rpc(Pid, {add, Amount}).
 
-withdraw(Pid, X) -> rpc(Pid, {withdraw, X}).
-
+withdraw(Pid, Amount) -> 
+    rpc(Pid, {withdraw, Amount}).
 
 rpc(Pid, Msg) ->
     %% sends Msg to Pid and recieves the response.
@@ -41,6 +43,6 @@ bank(X) ->
 	    bank(X-Y);
 	{From, balance} ->
 	    From ! X;
-        _ ->
-        from ! invalidMsg
+    {From, _} ->  % catch allt annat
+        From ! error
     end.
