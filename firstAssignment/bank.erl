@@ -2,29 +2,34 @@
 -compile(export_all).
 
 test() ->
+    io:format("Starting tests~n"),
     Pid = new(),
+    io:format("Testing add~n"),
     ok = add(Pid, 10),
     ok = add(Pid, 20),
+    io:format("Testing balance~n"),
     30 = balance(Pid),
+    io:format("Testing withdraw~n"),
     ok = withdraw(Pid, 15),
+    io:format("Testing balance after withdraw~n"),
     15 = balance(Pid),
-    insufficient_funds = widthdraw(Pid, 20),
+    insufficient_funds = withdraw(Pid, 20),
     horray.
 
 new() ->
     spawn(fun() -> bank(0) end).
 
-balance(Pid) ->
-    %% return the balance of the account
-    implement_this.
+balance(Pid) -> rpc(Pid, balance).
 
-add(Pid, X) -> rpc(Pid, implement_this).
+add(Pid, X) -> rpc(Pid, {add, X}).
 
-withdraw(Pid, X) ->
-    implement_this.
+withdraw(Pid, X) -> rpc(Pid, {withdraw, X}).
 
-rpc(Pid, X) ->
-    implement_this.
+
+rpc(Pid, Msg) ->
+    %% sends Msg to Pid and recieves the response.
+    Pid ! {self(), Msg},
+    receive Any -> Any end.
 
 bank(X) ->
     receive
@@ -32,7 +37,10 @@ bank(X) ->
 	    From ! ok,
 	    bank(X+Y);
 	{From, {withdraw, Y}} ->
-	    implement_this
-	implement_this ->
-	    implement_this
+	    From ! ok,
+	    bank(X-Y);
+	{From, balance} ->
+	    From ! X;
+        _ ->
+        from ! invalidMsg
     end.
