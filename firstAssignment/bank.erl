@@ -34,15 +34,17 @@ rpc(Pid, Msg) ->
     receive Any -> Any end.
 
 bank(X) ->
+    io:format("inside bank~n", []),
     receive
-	{From, {add, Y}} ->
-	    From ! ok,
-	    bank(X+Y);
-	{From, {withdraw, Y}} ->
-	    From ! ok,
-	    bank(X-Y);
-	{From, balance} ->
-	    From ! X;
-    {From, _} ->  % catch allt annat
-        From ! error
+        {From, {add, Y}} -> 
+            From ! ok, 
+            bank(X+Y);
+        {From, {withdraw, Y}} when Y > X ->
+            From ! insufficient_funds;
+        {From, {withdraw, Y}} -> 
+            From ! ok, 
+            bank(X-Y);
+        {From, balance} -> 
+            From ! X,
+            bank(X)
     end.
