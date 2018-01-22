@@ -9,6 +9,11 @@ test() ->
     duplicate_account_error = createAccount(Pid, lasse),
     ok = createAccount(Pid, maria),
 
+    % test add balance & withdraw
+    ok = add(Pid, lasse, 100),
+    100 = balance(Pid, lasse),
+    ok = add (Pid, maria, 200),
+    200 = balance(Pid, maria),
     horray.
 
 new() ->
@@ -17,18 +22,18 @@ new() ->
 lend(Pid, From, To, Amount) ->
     rpc(Pid, {From, To, Amount} ).
 
-balance(Pid) -> 
-    rpc(Pid, balance).
+balance(Pid, Who) -> 
+    rpc(Pid, {Who, balance} ).
 
-add(Pid, Amount) -> 
-    rpc(Pid, {add, Amount}).
+add(Pid, Who, Amount) -> 
+    rpc(Pid, {add, Who, Amount}).
 
-withdraw(Pid, Amount) -> 
-    rpc(Pid, {withdraw, Amount}).
+withdraw(Pid, Who, Amount) -> 
+    rpc(Pid, {withdraw, Who, Amount}).
 
 
-createAccount(Pid, Name) ->
-    rpc(Pid, {createAccount, Name}).
+createAccount(Pid, Who) ->
+    rpc(Pid, {createAccount, Who}).
 
 rpc(Pid, Msg) ->
     %% sends Msg to Pid and recieves the response.
@@ -52,15 +57,13 @@ bank(X) ->
         %% Amount operations
 
         {From, {add, Name, Amount}} -> 
-            io:format("adding.."),
-            balance = maps:get(Name, X),
-            newBalance = balance + Amount,
             From ! ok,
-            bank(maps:update(Name, newBalance));
+            io:format("Amount ~n~p\n", [Amount]),
+            io:format("Name ~n~p\n", [Name]),
+            io:format("current amount ~n~p", [maps:get(Name, X)]),
+            newBalance = maps:get(Name, X) + Amount,
+            bank(maps:update(Name, newBalance, X));
 
-        {From, {withdraw, Name, Amount}} when maps:get(Name, X) > Amount ->
-            From ! insufficient_funds,
-            bank(X); 
         {From, {withdraw, Name, Amount}} -> 
             io:format("withdrawing.."),
             balance = maps:get(Name, X),
