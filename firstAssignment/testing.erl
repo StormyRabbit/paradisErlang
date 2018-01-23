@@ -59,5 +59,6 @@ bank(X) ->
 
 account(AccInfo) ->
     receive
-
+        {From, {add, Amount}} ->
+            From ! ok
     end.

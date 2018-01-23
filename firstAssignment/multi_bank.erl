@@ -6,7 +6,6 @@ test() ->
     %% account creation tests
     ok = createAccount(Pid, lasse),
     duplicate_account_error = createAccount(Pid, lasse),
-    duplicate_account_error = createAccount(Pid, lasse),
     ok = createAccount(Pid, maria),
 
     % test add balance & withdraw
@@ -14,16 +13,19 @@ test() ->
     100 = balance(Pid, lasse),
     ok = add (Pid, maria, 200),
     200 = balance(Pid, maria),
+    no_known_account_error = balance(Pid, joe),
+    0 = withdraw(Pid, lasse, 100),
+    100 = withdraw(Pid, maria, 100),
     horray.
 
 new() ->
-    spawn(fun() -> bank(#{}) end).
+    spawn(fun() -> bank(maps:new()) end).
 
 lend(Pid, From, To, Amount) ->
     rpc(Pid, {From, To, Amount} ).
 
 balance(Pid, Who) -> 
-    rpc(Pid, {Who, balance} ).
+    rpc(Pid, {balance, Who} ).
 
 add(Pid, Who, Amount) -> 
     rpc(Pid, {add, Who, Amount}).
@@ -40,14 +42,13 @@ rpc(Pid, Msg) ->
     Pid ! {self(), Msg},
     receive Any -> Any end.
 
-
 bank(X) ->
     receive
         %% account creation
         {From, {createAccount, Name}} ->
         case maps:is_key(Name, X) of
             true -> 
-                From ! duplicate_account_error,
+                From ! duplicate_account_error, 
                 bank(X);
             false -> 
                 From ! ok,
@@ -57,29 +58,56 @@ bank(X) ->
         %% Amount operations
 
         {From, {add, Name, Amount}} -> 
-            From ! ok,
-            io:format("Amount ~n~p\n", [Amount]),
-            io:format("Name ~n~p\n", [Name]),
-            io:format("current amount ~n~p", [maps:get(Name, X)]),
-            newBalance = maps:get(Name, X) + Amount,
-            bank(maps:update(Name, newBalance, X));
+            case maps:is_key(Name, X) of 
+                true -> 
+                    From ! ok,
+                    NewBalance = maps:get(Name, X) + Amount,
+                    NewMap = maps:update(Name, NewBalance, X),
+                    bank(NewMap);
+                false ->
+                    From ! no_known_account_error,
+                    bank(X)
+            end;
 
-        {From, {withdraw, Name, Amount}} -> 
-            io:format("withdrawing.."),
-            balance = maps:get(Name, X),
-            newBalance = balance - Amount,
-            From ! ok,
-            bank(maps:update(Name, newBalance));
-        
+        {From, {withdraw, Name, Amount}} ->
+            case maps:is_key(Name, X) of
+                true -> 
+                    %% account exists, check if balance is enough
+                    case maps:get(Name, X) > Amount of 
+                        true -> 
+                            NewBalance = maps:get(Name, X) - Amount,
+                            NewMap = maps:update(Name, NewBalance, X),
+                            From ! ok,
+                            bank(NewMap);
+                        false ->
+                            From ! insufficient_funds,
+                            bank(X)
+                    end;
+                false -> 
+                    From ! no_known_account_error,
+                    bank(X)
+            end;
+    
         {From, {lend, Lender, Borrower, Amount}} ->
-            io:format("lending.."),
-            %% todo check if both exists
-            mapAfterLenderReduction = maps:get(Lender, X) - Amount,
-            mapAfterBorrowerIncrease = maps:get(Borrower, mapAfterLenderReduction) + Amount,
-            From ! ok,
-            bank(mapAfterBorrowerIncrease);
+            case maps:is_key(Lender, X) of
+                true -> case maps:is_key(Borrower, X) of
+                        true -> case maps:get(Lender, X) > Amount of 
+                                true ->
+                                    LenderBalance = maps:get(Lender, X) - Amount,
+                                    BorrowerBalance = maps:get(Borrower, X) + Amount,
+                                    
+                                false -> From ! insufficient_funds, bank(X),
+                        false-> From ! no_known_account_error, bank(X),
+                false -> From ! no_known_account_error, bank(X)
+            end; % end lend
+            
         {From, {balance, Name}} -> 
-            io:format("checking balance.."),
-            From ! maps:get(Name, X),
-            bank(X)
-    end.
+            case maps:is_key(Name, X) of
+                true -> 
+                    From ! maps:get(Name, X),
+                    bank(X);
+                false -> 
+                    From ! no_known_account_error,
+                    bank(X)
+            end % end balance
+        end. % recieve end
