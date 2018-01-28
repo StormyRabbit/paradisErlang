@@ -1,0 +1,12 @@
+This folder contains the source code for problem set 1 from the PARADIS course at Stockholms University VT18.
+The programs are executed by either of the following processes:
+
+From bash (or your OS terminal):
+$erlc fileName.erl
+$erl fileName.beam
+
+From the erlang shell:
+c(FileName).
+
+all modules contain unittests executed by calling the test() method.
+

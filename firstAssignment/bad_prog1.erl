@@ -7,27 +7,30 @@
 %  behave as expected.
 %  Running bad_prog1:test() should return the atom 'hooray'
 
+
 -compile(export_all).
 
-% TODO: unit tests & kommentarer
 test_all() ->
     % geometry calculation tests
     10 = double(5),
+    -10 = double(-5),
     100 = area({square,10}),
+    {'EXIT', _} = (catch area({rhombus, 5})),
     40 = perimeter({square,10}),
+    ok = perimeter({triangle, 20}),
 
     % temperature testing
     % melting point of sulfur 
     {f,212} = temperature_convert({c,100}), 
+    {c,100} = temperature_convert({f,212}), 
 
     % math tests
     24 = factorial(4),
-
     %all tests done
     hooray.
 
 factorial(0) -> 1;
-factorial(N) -> N*factorial(N-1).
+factorial(N) when N > 0 -> N*factorial(N-1).
 
 test1() ->
     io:format("double(2) is ~p~n",[double(2)]).
@@ -41,15 +44,16 @@ area({rectangle,X,Y}) ->
     X*Y;
 area({circle,R}) ->
     math:pi() * math:pow(R,2).
+
 	
 % temperature conversion 
 % using formula 5(F-32) = 9C
 % and F = C * 9 / 5+32
 temperature_convert({c,C}) -> 
-    F = C*9 div 5+32, % alternative change line 20 to 212.0
+    F = C * 9 div 5+32,
     {f,F};
 temperature_convert({f,F}) -> 
-    C = F-32*5/9,
+    C = (F - 32) * 5 div 9,
     {c,C}.
 
 % calculates the perimeter
