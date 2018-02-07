@@ -1,0 +1,59 @@
+This folder contains the source code for problem set 2 from the PARADIS course at Stockholms University VT18
+
+
+The programs are executed by either of the following processes:
+
+From terminal:
+$erlc fileName.erl
+$erl fileName.beam
+
+From the erlang shell:
+c(FileName).
+
+all modules contain unit tests executed by calling the test() method.
+
+The modules are:
+prime_check: 
+Module for checking if a number is a prime number. Can also retrieve all
+prime numbers from 1 to N.
+
+Functions in this module:
+
+test/0: 
+Unit test, does tests for all the different functions and returns hooray if
+everything is passed.
+
+seq/1: 
+Returns a list containing numbersfrom 1 to N.
+
+filter/2:
+Takes a function and a list, and returns a list only containing the elements in 
+the first list that evaluates to true when applying the function on it.
+
+all_primes/1:
+Uses the prevoius functions to build a list with only prime numbers with values
+between 1 and N.
+
+rotate/2:
+Rotates the list (second argument) as many steps as first parameter represents.
+eg: rotate(1, [1,2,3]) returns [3,2,1]. Does no rotation if N rem length(L) == 0.
+
+arithmetic_evaluator:
+Module for doing evaluations of modules 
+
+module functions:
+
+test/0: 
+Unit test, does tests for all the different functions and returns hooray if
+everything is passed.
+
+eval/1:
+Takes a arithmetic expression in the form of A tuple in the format of 
+{operationAtom, A, B} where A or B can be an integer, float or an own expression.
+supported operation atoms are:
+times, plus, minus, divide (do note that divide returns a float point division).
+
+safe_eval/1:
+Same as eval/1 but catches different types of invalid input and errors. 
+such as invalid format (eg. {minus, 11, asd}) aswell as division by zero.
+Returns a tuple in the format of {error, Error_msg} or {ok, Value} depending on out come.
