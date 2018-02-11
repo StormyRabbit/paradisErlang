@@ -3,30 +3,41 @@
 smap(_, [])    -> [];
 smap(F, [H|T]) -> [F(H) | smap(F, T)].
 
-test() -> start(3,5).
+test() -> 
+  15 = start(3,5), hooray.
 
 start(N, M) ->
-  register(first, spawn(fun() -> ring() end)),
-  Pids = createWorkers(N-1, []),
-  connect_ring(Pids).
-
-createWorkers(0, Pids) -> Pids;
-createWorkers(N, Pids) -> createWorkers(N-1, [spawn(fun() -> ring() end)|Pids]).
-
-connect_ring(Pids) ->
-  [Last|Tail] = lists:reverse(Pids),
-  link(whereis(first), Last),
-  connect_middle_section(Pids).
-
-connect_middle_section([First|[Second|T]]) -> link(First, Second), connect_middle_section([Second|T]).
-
-first_loop() -> 
+  S = self(),
+  Result = register(first, spawn(fun() -> first_loop(S, self()) end)),
+  Pids = create_links(N-1, []),
+  connect_chain(Pids),
+  [H|_] = Pids,
+  whereis(first) ! {next, H},
+  whereis(first) ! {0, M},
   receive 
-    {I, 0} -> io:format("GOT SOMETHING~n"), I; 
-    {I, M} -> io:format("GOT SOMETHING~n"), {I+1, M-1}, first_loop()
+    Any -> Any
   end.
 
-ring() -> 
+create_links(0, Pids) -> Pids;
+create_links(N, Pids) ->
+  NewLink = spawn(fun() -> loop(self()) end),
+  create_links(N-1, [NewLink|Pids]). 
+
+connect_chain(L) when length(L) == 1 ->
+  [H|_] = L,
+  H ! {next, whereis(first)};
+connect_chain([F|[S|T]]) -> 
+  F ! {next, S}, connect_chain([S|T]).
+
+first_loop(S, Next) -> 
+  receive 
+    {next, Asd} -> first_loop(S, Asd);
+    {I, 0} ->  S ! I; 
+    {I, M} -> Next ! {I+1, M-1}, first_loop(S, Next)
+  end.
+
+loop(Next) -> 
   receive
-    {I, M} -> io:format("GOT SOMETHING~n"), {I+1, M}, ring()
+    {next, Asd} -> loop(Asd);
+    {I, M} -> Next ! {I+1, M}, loop(Next)
   end.
