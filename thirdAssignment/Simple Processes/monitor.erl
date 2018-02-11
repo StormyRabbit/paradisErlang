@@ -23,6 +23,8 @@ double_monitor() ->
     receive
     {'EXIT', Pid, Why} -> 
     io:format("ERROR: ~p~n", [Why]),
+    % I assume this is a restart, not sure if there is an actual 
+    % difference between "starting a new" and restaring a crashed.
     io:format("RESTARTING CRASHED PROCESS...~n"), double:start(), 
     double_monitor()
     end.
