@@ -16,6 +16,8 @@ pmap_any(F, L) ->
     spawn_workers(F, L),
     gather(length(L), []).
 
+
+% Gathers all the results
 gather(0, Result) -> Result;
 gather(L, Result) ->
     receive 
@@ -23,12 +25,14 @@ gather(L, Result) ->
     end;
 gather(_, [])-> [].
 
+% creates the workers, one for each element in the list.
 spawn_workers(F, []) -> [];
 spawn_workers(F, [H|T]) -> 
     S = self(),
     spawn(fun() -> worker_process(S, F, H) end),
     spawn_workers(F, T).
-
+% the function that does the actual work, sends it to the parent 
+% as a msg.
 worker_process(Parent, Func, Work) -> 
     Result = Func(Work),
     Parent ! Result.
