@@ -12,7 +12,17 @@ test() ->
     io:format("PEER1: ~p~n", [Pid1]),
     Pid2 = peer:start(),
     io:format("PEER2: ~p~n", [Pid2]),
-    Pid2 ! {Pid1, send_me, 2, 0, 0},
-    Pid1 ! {file, "File"},
+    hooray.
+
+
+index_test() ->
+    {_, Index} = index:start(),
+    {_, Tracker} = tracker:start(),
+    Peer = peer:start("peerOne/", Index, Tracker),
+    io:format("peer1: ~p~n", [Peer]),
+    Peer2 = peer:start("peerTwo/", Index, Tracker),
+    io:format("peer2: ~p~n", [Peer2]),
+
+    peer:search_for_file(Peer, "p2.txt", Index, Tracker),
 
     hooray.

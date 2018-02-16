@@ -4,64 +4,56 @@
 % {what_have_you, Md5}
 % {i_have,[{Start,Stop}]}
 % {send_me,MD5,Start,Stop}
-% {add_to_index, FileName, Md5, Size}
 % {i_have, Md5}
 
 
 start(FileDirectory, Index, Tracker) -> 
     Map = setup(FileDirectory, Index, Tracker),
     State = maps:put(working_directory, FileDirectory, Map),
-    spawn(fun() -> loop(State) end),
-    hooray.
+    spawn(fun() -> loop(FileDirectory) end).
 
 setup(FileDirectory, Index, Tracker) ->
     {ok, FileNames} = file:list_dir(FileDirectory),
-    loadFiles(FileNames, FileDirectory, Index, Tracker),
-    
-loadFiles(FileNames, FileDirectory) -> 
-    loadFiles(FileNames, FileDirectory, #{}).
-loadFiles([], FileDirectory, Result) -> 
-    io:format("LOADED FILES: ~p~n", [Result]),
+    loadFiles(FileNames, FileDirectory, Index, Tracker, #{}).
+
+loadFiles([], _, _,_ , Result) -> 
     Result;
 loadFiles([File|Files], FileDirectory, Index, Tracker, Result) -> 
-    {ok, Bin} = file:read_file(FileDirectory ++ "/" ++ File),
+    FilePath = FileDirectory ++ "/" ++ File,
+    {ok, Bin} = file:read_file(FilePath),
+    Size = filelib:file_size(FilePath),    
     Md5 = erlang:md5(Bin),
-    notify_server(File, Md5, Index, Tracker),
-    loadFiles(Files, FileDirectory, Index, Tracker, maps:put(Md5, File, Result)).
-                
-notify_server(File, Md5, Index, Tracker) ->
+    index:add_to_index(Index, File, Md5, Size),
+    NewMap =  maps:put(Md5, File, Result),
+    loadFiles(Files, FileDirectory, Index, Tracker, NewMap).
     
-    Index ! {add_to_index, File, Md5,}
+search_for_file(Client, FileName, Index, Tracker) ->
+    case index:search_for_file(Index, FileName) of
+        {ok, no_result} -> io:format("No such file~n");
+        {ok, {Md5, Size}} -> register_with_tracker(Client, Md5, FileName, Tracker)
+    end.
 
-send_file(File, Receiver, Md5, Start, Stop) ->
-    Receiver ! {file, File}.
-save_file(File, Files, Md5) -> 
-    io:format("SAVING FILE: ~p~n", [File]),
-    Files:put(Md5, File, Files).
+register_with_tracker(Client, Directory, Md5, FileName, Tracker) ->
+    FilePath = FileDirectory ++ "/" ++ File,
+    {ok, Bin} = file:read_file(FilePath),
+    tracker:i_am_intrested_in(Tracker, Md5, Client),
+    Peers = tracker:who_is_interested(Tracker, Md5),
+    requestFile(Client, Md5, Peers, FileName).
+
+requestFile(Client, Md5, [Peer|Peers], FileName) ->
+    Peer ! {Client, what_have_you, Md5}.
+
+what_have_you(State, Md5) 
+
 loop(State) -> 
     receive 
-
-    {From, what_have_you, Md5} -> 
-        case maps:find(Md5) of
-        {ok, _} -> From ! {self(), i_have, [{0,0}]},
-
+    {From, what_have_you, Md5} ->
+        From ! what_have_you(State, Md5),
         loop(State);
-    
-    {From, i_have, [{Start, Stop}]} -> 
+    {From, i_have, [{Start, Stop}]} ->
+        io:format("I HAVE RECEIVED FROM: ~p TO ~p ~n", [From, self()]),
         loop(State);
-    
     {From, send_me, Md5, Start, Stop} -> 
-        io:format("FROM: ~p~n", [From]),
-        send_file(State, From, Md5, Start, Stop), 
-        loop(State);
-
-    {file, File, Md5} ->  
-        NewState = save_file(File, State, Md5), 
-        loop(NewState);
-    {From, add_to_index, FileName, Md5, Size} ->
-        loop(State);
-
-    {From, i_have, Md5} ->
         loop(State)
     end.
 
