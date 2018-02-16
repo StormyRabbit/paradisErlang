@@ -22,7 +22,6 @@ index_test() ->
     io:format("peer1: ~p~n", [Peer]),
     Peer2 = peer:start("peerTwo/", Index, Tracker),
     io:format("peer2: ~p~n", [Peer2]),
-
+    peer:register_with_tracker(Peer2, "peerTwo/", Tracker),
     peer:search_for_file(Peer, "p2.txt", Index, Tracker),
-
     hooray.

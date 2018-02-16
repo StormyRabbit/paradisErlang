@@ -17,7 +17,7 @@ handle_call({who_is_interested, Md5}, _From, State) ->
 	Response = case maps:is_key(Md5, State) of
 	    true ->
         	NewState = State,
-            maps:get(Md5, State);
+			maps:get(Md5, State);
 		false ->
             NewState = State,
             {unknown_file, Md5}
@@ -29,10 +29,10 @@ handle_call({get_state}, _From, State) ->
 
 handle_call({i_am_intrested_in, Md5, Peer}, _From, State) ->
     % intrest == has part of file, or non of the file
-	io:format("~n Intrest received from ~p concerning ~n~p", [Peer, Md5]),
+	io:format("~n Intrest received from ~p concerning ~n~p~n", [Peer, Md5]),
 	Response = case maps:is_key(Md5, State) of
 	    true ->
-            List = maps:get(Md5, State),
+			List = maps:get(Md5, State),
 			NewState = maps:update(Md5, [Peer|List], State),
 			{intrest_added, Md5};
 		false ->
@@ -40,6 +40,7 @@ handle_call({i_am_intrested_in, Md5, Peer}, _From, State) ->
             {file_has_been_indexed, Md5}
 	end,
 	{reply, Response, NewState}.
+
 
 handle_cast(_Message, State) -> {noreply, State}.
 handle_info(_Message, State) -> {noreply, State}.
